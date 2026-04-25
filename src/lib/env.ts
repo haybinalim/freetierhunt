@@ -80,6 +80,15 @@ const clientSchema = z.object({
   NEXT_PUBLIC_TALLY_FORM_ID: z.string().optional(),
 });
 
+/** Treat empty strings as undefined so `KEY=` (no value) passes optional() validators. */
+function stripEmptyStrings<T extends Record<string, string | undefined>>(obj: T): T {
+  const cleaned: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    cleaned[key] = typeof value === 'string' && value.trim() === '' ? undefined : value;
+  }
+  return cleaned as T;
+}
+
 // ---------- Validation (runs at module import time) ----------
 function buildEnv() {
   // Client vars MUST be referenced by literal name so Next.js inlines them.
@@ -97,10 +106,10 @@ function buildEnv() {
 
   // Server-side: validate full schema. Client-side: skip server vars.
   const serverParsed = isServer
-    ? serverSchema.safeParse(process.env)
+    ? serverSchema.safeParse(stripEmptyStrings(process.env as Record<string, string | undefined>))
     : { success: true as const, data: {} as z.infer<typeof serverSchema> };
 
-  const clientParsed = clientSchema.safeParse(rawClient);
+  const clientParsed = clientSchema.safeParse(stripEmptyStrings(rawClient));
 
   if (!serverParsed.success) {
     const errors = serverParsed.error.flatten().fieldErrors;
