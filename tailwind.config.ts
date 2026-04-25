@@ -20,8 +20,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        // CSS variables wired via next/font in app/layout.tsx
+        mono: ['var(--font-plex-mono)', 'ui-monospace', 'monospace'],
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         brutal: '4px 4px 0 0 #000',

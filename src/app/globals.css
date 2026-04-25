@@ -2,19 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --color-bg: 255 215 0; /* brutal yellow */
-  --color-fg: 0 0 0;
-}
-
-.dark {
-  --color-bg: 0 0 0;
-  --color-fg: 255 215 0;
-}
-
+/* Brutal design baseline — colors set via Tailwind classes in layout.tsx.
+   Dark mode (next-themes) wired in Hafta 6 (audit fix B29). */
 @layer base {
-  body {
-    background: rgb(var(--color-bg));
-    color: rgb(var(--color-fg));
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  ::selection {
+    background-color: #000;
+    color: #ffd700;
   }
 }
