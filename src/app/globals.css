@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: 255 215 0; /* brutal yellow */
+  --color-fg: 0 0 0;
+}
+
+.dark {
+  --color-bg: 0 0 0;
+  --color-fg: 255 215 0;
+}
+
+@layer base {
+  body {
+    background: rgb(var(--color-bg));
+    color: rgb(var(--color-fg));
+  }
+}
