@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { IBM_Plex_Mono, Inter } from 'next/font/google';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { env } from '@/lib/env';
 import './globals.css';
 
 const inter = Inter({
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
   },
   description:
     'Discover free tiers, generous trials, and verified promo codes for the AI tools you actually use. Curated daily.',
-  metadataBase: new URL(process.env.SITE_URL ?? 'http://localhost:3000'),
+  metadataBase: new URL(env.SITE_URL),
   openGraph: {
     type: 'website',
     siteName: 'FreeTierHunt',
