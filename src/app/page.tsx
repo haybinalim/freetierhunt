@@ -1,12 +1,18 @@
 import Link from 'next/link';
+import { OfferCard } from '@/components/OfferCard';
+import { getStats, listActiveOffers } from '@/lib/db/queries';
 
-const STATS = [
-  { label: 'AI tools tracked', value: '500+' },
-  { label: 'Active offers', value: '1,200+' },
-  { label: 'Avg saved / dev', value: '$80/mo' },
-] as const;
+// ISR: revalidate every 5 minutes (today's deals can change)
+export const revalidate = 300;
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [stats, offers] = await Promise.all([getStats(), listActiveOffers({ limit: 10 })]);
+  const STATS = [
+    { label: 'AI tools tracked', value: `${stats.products}` },
+    { label: 'Active offers', value: `${stats.activeOffers}` },
+    { label: 'Avg saved / dev', value: '$80/mo' },
+  ] as const;
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-12 md:py-20">
       {/* Hero */}
@@ -32,7 +38,9 @@ export default function HomePage() {
             Join the waitlist →
           </Link>
           <Link
-            href="https://github.com/freetierhunt/freetierhunt"
+            href="https://github.com/haybinalim/freetierhunt"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center justify-center border-3 border-brutal-black bg-brutal-yellow px-6 py-3 font-mono text-sm font-bold uppercase tracking-widest shadow-brutal transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-brutal-lg"
           >
             ⭐ Star on GitHub
@@ -55,6 +63,29 @@ export default function HomePage() {
             </div>
           </div>
         ))}
+      </section>
+
+      {/* Today's Top Deals — real data */}
+      <section className="mt-12">
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="font-mono text-2xl font-bold uppercase tracking-tight md:text-3xl">
+            🔥 Today&apos;s Top Deals
+          </h2>
+          <span className="font-mono text-xs uppercase tracking-widest text-brutal-black/60">
+            {offers.length} active
+          </span>
+        </div>
+        {offers.length === 0 ? (
+          <p className="mt-6 border-3 border-dashed border-brutal-black/40 bg-brutal-white p-6 font-mono text-sm">
+            No active offers yet. Run <code className="bg-brutal-yellow px-1">pnpm db:seed</code>.
+          </p>
+        ) : (
+          <div className="mt-6 space-y-4">
+            {offers.map((offer, i) => (
+              <OfferCard key={offer.id} offer={offer} rank={i + 1} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Waitlist placeholder — Hafta 1 Çarşamba'da Tally form embed olacak */}

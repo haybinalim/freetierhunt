@@ -17,6 +17,7 @@ const config: Config = {
           white: '#FFFFFF',
           red: '#FF3B30',
           green: '#34C759',
+          orange: '#FF6600',
         },
       },
       fontFamily: {
