@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SearchTrigger } from './SearchCommand';
 
 interface HeaderProps {
   /**
@@ -25,16 +26,19 @@ export function Header({ savingsUsd = 0 }: HeaderProps) {
           Free credits · Trials · Promo codes for AI tools
         </p>
 
-        <div
-          className="border-3 border-brutal-black bg-brutal-white px-4 py-2 shadow-brutal"
-          aria-label="Community savings counter"
-        >
-          <span className="block font-mono text-[10px] uppercase tracking-widest text-brutal-black/60">
-            Community saved
-          </span>
-          <span className="block font-mono text-xl font-bold tabular-nums">
-            ${savingsUsd.toLocaleString('en-US')}
-          </span>
+        <div className="flex items-center gap-3">
+          <SearchTrigger />
+          <div
+            className="border-3 border-brutal-black bg-brutal-white px-4 py-2 shadow-brutal"
+            aria-label="Community savings counter"
+          >
+            <span className="block font-mono text-[10px] uppercase tracking-widest text-brutal-black/60">
+              Community saved
+            </span>
+            <span className="block font-mono text-xl font-bold tabular-nums">
+              ${savingsUsd.toLocaleString('en-US')}
+            </span>
+          </div>
         </div>
       </div>
     </header>

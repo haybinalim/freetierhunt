@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, Inter } from 'next/font/google';
 import { CookieBanner } from '@/components/CookieBanner';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
+import { SearchCommand } from '@/components/SearchCommand';
 import { env } from '@/lib/env';
 import './globals.css';
 
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <SearchCommand />
         <CookieBanner />
       </body>
     </html>

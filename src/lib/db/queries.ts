@@ -6,7 +6,7 @@
  *   - Joinable shapes for components
  *   - Eventual caching (unstable_cache wrappers in Hafta 5+)
  */
-import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, ilike, isNull, isNotNull, or, sql } from 'drizzle-orm';
 import { db } from './client';
 import { offers, products, offerVotes, featureFlags } from './schema';
 
@@ -112,6 +112,84 @@ export async function getFlag(key: string): Promise<boolean> {
     .where(eq(featureFlags.key, key))
     .limit(1);
   return rows[0]?.enabled ?? false;
+}
+
+// ----------------------------------------------------------------------------
+// Search (ILIKE — Postgres trigram-friendly; replace with Meilisearch in H7)
+// ----------------------------------------------------------------------------
+export type SearchResult = {
+  products: Pick<Product, 'id' | 'name' | 'slug' | 'category' | 'logoUrl' | 'description'>[];
+  offers: (Pick<Offer, 'id' | 'headline' | 'type' | 'value'> & {
+    productName: string;
+    productSlug: string;
+  })[];
+};
+
+export async function search(query: string, limit = 8): Promise<SearchResult> {
+  const q = query.trim();
+  if (q.length < 2) return { products: [], offers: [] };
+  const pattern = `%${q.replace(/[%_]/g, '\\$&')}%`;
+
+  const [productRows, offerRows] = await Promise.all([
+    db
+      .select({
+        id: products.id,
+        name: products.name,
+        slug: products.slug,
+        category: products.category,
+        logoUrl: products.logoUrl,
+        description: products.description,
+      })
+      .from(products)
+      .where(or(ilike(products.name, pattern), ilike(products.description, pattern)))
+      .limit(limit),
+
+    db
+      .select({
+        id: offers.id,
+        headline: offers.headline,
+        type: offers.type,
+        value: offers.value,
+        productName: products.name,
+        productSlug: products.slug,
+      })
+      .from(offers)
+      .innerJoin(products, eq(offers.productId, products.id))
+      .where(and(isActive(), ilike(offers.headline, pattern)))
+      .orderBy(desc(offers.score))
+      .limit(limit),
+  ]);
+
+  return { products: productRows, offers: offerRows };
+}
+
+// ----------------------------------------------------------------------------
+// Categories
+// ----------------------------------------------------------------------------
+export type CategoryWithCount = { category: string; productCount: number };
+
+export async function listCategories(): Promise<CategoryWithCount[]> {
+  const rows = await db
+    .select({
+      category: products.category,
+      productCount: sql<number>`count(*)::int`,
+    })
+    .from(products)
+    .where(isNotNull(products.category))
+    .groupBy(products.category)
+    .orderBy(asc(products.category));
+
+  return rows
+    .filter((r): r is { category: string; productCount: number } => r.category !== null)
+    .map((r) => ({ category: r.category, productCount: r.productCount }));
+}
+
+export async function listProductsByCategory(category: string): Promise<Product[]> {
+  return db
+    .select()
+    .from(products)
+    .where(eq(products.category, category))
+    .orderBy(asc(products.name));
 }
 
 // ----------------------------------------------------------------------------
