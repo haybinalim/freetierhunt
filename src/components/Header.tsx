@@ -22,9 +22,14 @@ export function Header({ savingsUsd = 0 }: HeaderProps) {
           </span>
         </Link>
 
-        <p className="hidden font-mono text-sm uppercase tracking-wider text-brutal-black/70 md:block">
-          Free credits · Trials · Promo codes for AI tools
-        </p>
+        <nav className="hidden items-center gap-4 font-mono text-xs uppercase tracking-widest md:flex">
+          <Link href="/categories" className="hover:underline">
+            Categories
+          </Link>
+          <Link href="/saved" className="hover:underline">
+            Saved ★
+          </Link>
+        </nav>
 
         <div className="flex items-center gap-3">
           <SearchTrigger />

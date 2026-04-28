@@ -18,16 +18,19 @@ interface OfferActionsProps {
   offerId: number;
   /** Compact mode hides labels (used inside dense feeds). */
   compact?: boolean;
+  /** Server-prefetched counts; will be optimistically incremented on vote. */
+  initialCounts?: { up: number; down: number };
 }
 
 /**
  * Anonymous-safe interactive controls: vote up/down, save, report.
  * Vote choice is persisted in localStorage so the UI reflects past votes.
  */
-export function OfferActions({ offerId, compact = false }: OfferActionsProps) {
+export function OfferActions({ offerId, compact = false, initialCounts }: OfferActionsProps) {
   const visitorId = useVisitorId();
   const { isSaved, toggle: toggleSave } = useSavedOffers();
   const [vote, setVote] = useState<Vote | null>(null);
+  const [counts, setCounts] = useState(initialCounts ?? { up: 0, down: 0 });
   const [voting, setVoting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reported, setReported] = useState(false);
@@ -59,7 +62,15 @@ export function OfferActions({ offerId, compact = false }: OfferActionsProps) {
     if (!visitorId || voting || vote === direction) return;
     setVoting(true);
     const previous = vote;
-    setVote(direction); // optimistic
+    const previousCounts = counts;
+    // Optimistic count delta: remove previous vote (if any), add new one.
+    const next = { ...counts };
+    if (previous === 'up') next.up = Math.max(0, next.up - 1);
+    if (previous === 'down') next.down = Math.max(0, next.down - 1);
+    if (direction === 'up') next.up += 1;
+    if (direction === 'down') next.down += 1;
+    setVote(direction);
+    setCounts(next);
     try {
       const res = await fetch(`/api/offers/${offerId}/vote`, {
         method: 'POST',
@@ -73,7 +84,8 @@ export function OfferActions({ offerId, compact = false }: OfferActionsProps) {
         /* noop */
       }
     } catch {
-      setVote(previous); // revert
+      setVote(previous);
+      setCounts(previousCounts);
     } finally {
       setVoting(false);
     }
@@ -106,12 +118,13 @@ export function OfferActions({ offerId, compact = false }: OfferActionsProps) {
         onClick={() => castVote('up')}
         disabled={voting || !visitorId}
         aria-pressed={vote === 'up'}
-        aria-label="Upvote"
-        className={`inline-flex h-8 w-8 items-center justify-center border-2 border-brutal-black font-mono text-sm font-bold transition-transform hover:-translate-y-0.5 disabled:opacity-50 ${
+        aria-label={`Upvote (${counts.up})`}
+        className={`inline-flex h-8 items-center gap-1 border-2 border-brutal-black px-2 font-mono text-xs font-bold transition-transform hover:-translate-y-0.5 disabled:opacity-50 ${
           vote === 'up' ? 'bg-brutal-green' : 'bg-brutal-white'
         }`}
       >
-        ▲
+        <span aria-hidden>▲</span>
+        <span className="tabular-nums">{counts.up}</span>
       </button>
 
       {/* Vote down */}
@@ -120,12 +133,13 @@ export function OfferActions({ offerId, compact = false }: OfferActionsProps) {
         onClick={() => castVote('down')}
         disabled={voting || !visitorId}
         aria-pressed={vote === 'down'}
-        aria-label="Downvote"
-        className={`inline-flex h-8 w-8 items-center justify-center border-2 border-brutal-black font-mono text-sm font-bold transition-transform hover:-translate-y-0.5 disabled:opacity-50 ${
+        aria-label={`Downvote (${counts.down})`}
+        className={`inline-flex h-8 items-center gap-1 border-2 border-brutal-black px-2 font-mono text-xs font-bold transition-transform hover:-translate-y-0.5 disabled:opacity-50 ${
           vote === 'down' ? 'bg-brutal-red text-brutal-white' : 'bg-brutal-white'
         }`}
       >
-        ▼
+        <span aria-hidden>▼</span>
+        <span className="tabular-nums">{counts.down}</span>
       </button>
 
       {/* Save */}

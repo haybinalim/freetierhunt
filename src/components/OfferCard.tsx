@@ -20,9 +20,10 @@ const TYPE_BG: Record<OfferWithProduct['type'], string> = {
 interface OfferCardProps {
   offer: OfferWithProduct;
   rank?: number;
+  voteCounts?: { up: number; down: number };
 }
 
-export function OfferCard({ offer, rank }: OfferCardProps) {
+export function OfferCard({ offer, rank, voteCounts }: OfferCardProps) {
   const { product } = offer;
   return (
     <article className="group flex flex-col gap-4 border-3 border-brutal-black bg-brutal-white p-5 shadow-brutal transition-transform hover:-translate-x-1 hover:-translate-y-1 hover:shadow-brutal-lg md:flex-row md:items-center">
@@ -56,12 +57,12 @@ export function OfferCard({ offer, rank }: OfferCardProps) {
           <p className="mt-1 line-clamp-2 text-sm text-brutal-black/75">{offer.description}</p>
         )}
         <div className="mt-3 md:hidden">
-          <OfferActions offerId={offer.id} compact />
+          <OfferActions offerId={offer.id} compact initialCounts={voteCounts} />
         </div>
       </div>
 
       <div className="hidden md:block">
-        <OfferActions offerId={offer.id} compact />
+        <OfferActions offerId={offer.id} compact initialCounts={voteCounts} />
       </div>
 
       <ClaimLink

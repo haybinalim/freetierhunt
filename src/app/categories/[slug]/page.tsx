@@ -2,7 +2,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import slugify from 'slugify';
 import type { Metadata } from 'next';
-import { listCategories, listProductsByCategory, listActiveOffers } from '@/lib/db/queries';
+import {
+  getVoteCountsBatch,
+  listActiveOffers,
+  listCategories,
+  listProductsByCategory,
+} from '@/lib/db/queries';
 import { OfferCard } from '@/components/OfferCard';
 
 export const revalidate = 3600;
@@ -46,6 +51,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   // All currently active offers, then filter to this category in-memory (small N).
   const allActive = await listActiveOffers({ limit: 100 });
   const offers = allActive.filter((o) => productIds.has(o.productId));
+  const voteCounts = await getVoteCountsBatch(offers.map((o) => o.id));
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
@@ -103,7 +109,12 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
           </h2>
           <div className="mt-6 space-y-4">
             {offers.map((offer, i) => (
-              <OfferCard key={offer.id} offer={offer} rank={i + 1} />
+              <OfferCard
+                key={offer.id}
+                offer={offer}
+                rank={i + 1}
+                voteCounts={voteCounts.get(offer.id)}
+              />
             ))}
           </div>
         </section>

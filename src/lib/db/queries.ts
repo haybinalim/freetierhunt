@@ -6,7 +6,7 @@
  *   - Joinable shapes for components
  *   - Eventual caching (unstable_cache wrappers in Hafta 5+)
  */
-import { and, asc, desc, eq, gt, ilike, isNull, isNotNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, ilike, inArray, isNull, isNotNull, or, sql } from 'drizzle-orm';
 import { db } from './client';
 import { offers, products, offerVotes, featureFlags } from './schema';
 
@@ -68,6 +68,16 @@ export async function getOfferById(id: number): Promise<OfferWithProduct | null>
   return { ...first.offer, product: first.product };
 }
 
+export async function getOffersByIds(ids: number[]): Promise<OfferWithProduct[]> {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select({ offer: offers, product: products })
+    .from(offers)
+    .innerJoin(products, eq(offers.productId, products.id))
+    .where(inArray(offers.id, ids));
+  return rows.map((r) => ({ ...r.offer, product: r.product }));
+}
+
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const rows = await db.select().from(products).where(eq(products.slug, slug)).limit(1);
   return rows[0] ?? null;
@@ -84,6 +94,29 @@ export async function listOffersForProduct(productId: number): Promise<Offer[]> 
 // ----------------------------------------------------------------------------
 // Vote aggregates (anonymous-safe)
 // ----------------------------------------------------------------------------
+export async function getVoteCountsBatch(
+  offerIds: number[]
+): Promise<Map<number, { up: number; down: number }>> {
+  const map = new Map<number, { up: number; down: number }>();
+  if (offerIds.length === 0) return map;
+  const rows = await db
+    .select({
+      offerId: offerVotes.offerId,
+      vote: offerVotes.vote,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(offerVotes)
+    .where(inArray(offerVotes.offerId, offerIds))
+    .groupBy(offerVotes.offerId, offerVotes.vote);
+  for (const r of rows) {
+    const cur = map.get(r.offerId) ?? { up: 0, down: 0 };
+    if (r.vote === 'up') cur.up = r.count;
+    else if (r.vote === 'down') cur.down = r.count;
+    map.set(r.offerId, cur);
+  }
+  return map;
+}
+
 export async function getVoteCounts(offerId: number): Promise<{ up: number; down: number }> {
   const rows = await db
     .select({

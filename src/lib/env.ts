@@ -61,6 +61,9 @@ const serverSchema = z.object({
   DISCORD_WEBHOOK_URL: z.string().url().optional(),
   REVALIDATE_SECRET: z.string().min(16).optional(),
 
+  // Admin gate (interim, until Supabase Auth role-based access in H9)
+  ADMIN_TOKEN: z.string().min(16).optional(),
+
   // Vercel-injected (read-only at runtime)
   VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
   VERCEL_GIT_COMMIT_SHA: z.string().optional(),
