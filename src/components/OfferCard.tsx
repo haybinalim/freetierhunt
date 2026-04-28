@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import type { OfferWithProduct } from '@/lib/db/queries';
+import { OfferActions } from './OfferActions';
+import { ClaimLink } from './ClaimLink';
 
 const TYPE_LABEL: Record<OfferWithProduct['type'], string> = {
   free_tier: '🆓 FREE TIER',
@@ -53,14 +55,23 @@ export function OfferCard({ offer, rank }: OfferCardProps) {
         {offer.description && (
           <p className="mt-1 line-clamp-2 text-sm text-brutal-black/75">{offer.description}</p>
         )}
+        <div className="mt-3 md:hidden">
+          <OfferActions offerId={offer.id} compact />
+        </div>
       </div>
 
-      <Link
-        href={`/products/${product.slug}`}
+      <div className="hidden md:block">
+        <OfferActions offerId={offer.id} compact />
+      </div>
+
+      <ClaimLink
+        offerId={offer.id}
+        href={product.website ?? `/products/${product.slug}`}
+        external={Boolean(product.website)}
         className="inline-flex shrink-0 items-center justify-center border-3 border-brutal-black bg-brutal-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest text-brutal-yellow shadow-brutal transition-transform group-hover:-translate-x-0.5 group-hover:-translate-y-0.5"
       >
         Claim →
-      </Link>
+      </ClaimLink>
     </article>
   );
 }

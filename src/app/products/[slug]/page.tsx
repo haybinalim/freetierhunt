@@ -5,6 +5,9 @@ import { db } from '@/lib/db/client';
 import { products } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
 import { getProductBySlug, listOffersForProduct, type Offer } from '@/lib/db/queries';
+import { OfferActions } from '@/components/OfferActions';
+import { ClaimLink } from '@/components/ClaimLink';
+import { CopyCode } from '@/components/CopyCode';
 
 // ISR: cache 1 hour, allow new slugs to render dynamically
 export const revalidate = 3600;
@@ -129,31 +132,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <p className="text-sm text-brutal-black/75">{offer.description}</p>
                 )}
 
-                {offer.code && (
-                  <div className="flex items-center gap-2 border-2 border-dashed border-brutal-black bg-brutal-yellow/40 px-3 py-2">
-                    <code className="flex-1 font-mono text-sm font-bold tracking-wider">
-                      {offer.code}
-                    </code>
-                  </div>
-                )}
+                {offer.code && <CopyCode offerId={offer.id} code={offer.code} />}
 
-                <div className="mt-auto flex items-center justify-between gap-3">
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
                   <span className="font-mono text-[10px] uppercase tracking-widest text-brutal-black/60">
                     {offer.expiresAt
                       ? `Expires ${new Date(offer.expiresAt).toLocaleDateString()}`
                       : 'No expiry'}
                   </span>
-                  {product.website && (
-                    <a
-                      href={product.website}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      className="inline-flex items-center justify-center border-3 border-brutal-black bg-brutal-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest text-brutal-yellow shadow-brutal transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
-                    >
-                      Get offer →
-                    </a>
-                  )}
+                  <OfferActions offerId={offer.id} compact />
                 </div>
+
+                {product.website && (
+                  <ClaimLink
+                    offerId={offer.id}
+                    href={product.website}
+                    external
+                    className="inline-flex items-center justify-center border-3 border-brutal-black bg-brutal-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest text-brutal-yellow shadow-brutal transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
+                  >
+                    Get offer →
+                  </ClaimLink>
+                )}
               </article>
             ))}
           </div>
