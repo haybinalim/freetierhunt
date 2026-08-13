@@ -32,6 +32,17 @@ function quoteAppearsInEvidence(quote: string, pageText: string): boolean {
   return normalize(pageText).includes(normalize(quote));
 }
 
+export function resolveOfficialAnalysisStatus(
+  analysis: OfficialOfferAnalysis,
+  pageText: string
+): 'succeeded' | 'needs_review' {
+  return analysis.verdict === 'supported' &&
+    analysis.confidence >= 80 &&
+    quoteAppearsInEvidence(analysis.evidenceQuote, pageText)
+    ? 'succeeded'
+    : 'needs_review';
+}
+
 function createSourceRecord(url: string): SourceRecord {
   const parsed = new URL(url);
   return {
@@ -111,10 +122,7 @@ export async function verifySubmissionFromOfficialPage(
     });
     const analysis = officialOfferAnalysisSchema.parse(JSON.parse(result.content));
     const quoteIsVerbatim = quoteAppearsInEvidence(analysis.evidenceQuote, pageText);
-    const status =
-      analysis.verdict === 'supported' && analysis.confidence >= 80 && quoteIsVerbatim
-        ? 'succeeded'
-        : 'needs_review';
+    const status = resolveOfficialAnalysisStatus(analysis, pageText);
     const reviewReason = !quoteIsVerbatim
       ? 'Model evidence quote was not found verbatim on the official page'
       : analysis.verdict !== 'supported'
