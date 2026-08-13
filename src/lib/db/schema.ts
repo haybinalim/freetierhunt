@@ -79,6 +79,12 @@ export const telegramInboundStatusEnum = pgEnum('telegram_inbound_status', [
   'ignored',
   'rejected',
 ]);
+export const officialAnalysisStatusEnum = pgEnum('official_analysis_status', [
+  'pending',
+  'succeeded',
+  'needs_review',
+  'failed',
+]);
 
 // -----------------------------------------------------------------------------
 // Product and source catalog
@@ -470,6 +476,45 @@ export const telegramInboundUpdates = pgTable(
   (table) => ({
     chatReceivedIdx: index('telegram_inbound_chat_received_idx').on(table.chatId, table.receivedAt),
     statusIdx: index('telegram_inbound_status_idx').on(table.status),
+  })
+);
+
+/**
+ * Model output derived exclusively from an official provider page or source
+ * observation. Telegram post content is not an input and is not stored here.
+ */
+export const officialPageAnalyses = pgTable(
+  'official_page_analyses',
+  {
+    id: serial('id').primaryKey(),
+    submissionId: integer('submission_id')
+      .notNull()
+      .references(() => submissions.id, { onDelete: 'cascade' })
+      .unique(),
+    sourceObservationId: integer('source_observation_id').references(() => sourceObservations.id, {
+      onDelete: 'set null',
+    }),
+    status: officialAnalysisStatusEnum('status').default('pending').notNull(),
+    category: varchar('category', { length: 100 }),
+    offerType: offerTypeEnum('offer_type'),
+    confidence: integer('confidence'),
+    officialUrl: varchar('official_url', { length: 500 }).notNull(),
+    evidenceQuote: text('evidence_quote'),
+    structuredClaims: jsonb('structured_claims').$type<Record<string, unknown>>(),
+    reviewReason: text('review_reason'),
+    model: varchar('model', { length: 150 }),
+    promptVersion: varchar('prompt_version', { length: 100 }),
+    inputHash: varchar('input_hash', { length: 64 }),
+    costUsd: numeric('cost_usd', { precision: 12, scale: 6 }),
+    errorMessage: text('error_message'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    statusIdx: index('official_page_analyses_status_idx').on(table.status),
+    sourceObservationIdx: index('official_page_analyses_source_observation_idx').on(
+      table.sourceObservationId
+    ),
   })
 );
 

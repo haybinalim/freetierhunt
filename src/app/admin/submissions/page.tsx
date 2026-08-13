@@ -6,6 +6,7 @@ import slugify from 'slugify';
 import { db } from '@/lib/db/client';
 import {
   offerEvidence,
+  officialPageAnalyses,
   offers,
   offerVersions,
   products,
@@ -13,6 +14,7 @@ import {
   submissions,
 } from '@/lib/db/schema';
 import { requireAdmin } from '@/lib/admin/guard';
+import { verifySubmissionFromOfficialPage } from '@/lib/verification/official-page-verifier';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -24,6 +26,13 @@ const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-brutal-yellow',
   approved: 'bg-brutal-green',
   rejected: 'bg-brutal-red text-brutal-white',
+};
+
+const ANALYSIS_COLORS: Record<string, string> = {
+  pending: 'bg-brutal-yellow',
+  succeeded: 'bg-brutal-green',
+  needs_review: 'bg-brutal-orange',
+  failed: 'bg-brutal-red text-brutal-white',
 };
 
 function normalizeHttpUrl(value: FormDataEntryValue | null): URL | null {
@@ -165,6 +174,16 @@ async function approve(formData: FormData) {
   revalidatePath(`/products/${slug}`);
 }
 
+async function analyzeOfficialPage(formData: FormData) {
+  'use server';
+  await requireAdmin();
+  const id = Number(formData.get('id'));
+  if (!Number.isFinite(id) || id <= 0) return;
+
+  await verifySubmissionFromOfficialPage(id);
+  revalidatePath('/admin/submissions');
+}
+
 async function reject(formData: FormData) {
   'use server';
   await requireAdmin();
@@ -188,7 +207,13 @@ async function reject(formData: FormData) {
 
 export default async function AdminSubmissionsPage() {
   await requireAdmin();
-  const rows = await db.select().from(submissions).orderBy(desc(submissions.createdAt)).limit(100);
+  const [rows, analyses] = await Promise.all([
+    db.select().from(submissions).orderBy(desc(submissions.createdAt)).limit(100),
+    db.select().from(officialPageAnalyses).orderBy(desc(officialPageAnalyses.createdAt)).limit(100),
+  ]);
+  const analysisBySubmission = new Map(
+    analyses.map((analysis) => [analysis.submissionId, analysis])
+  );
   const pending = rows.filter((row) => row.status === 'pending');
   const reviewed = rows.filter((row) => row.status !== 'pending');
 
@@ -225,88 +250,165 @@ export default async function AdminSubmissionsPage() {
           </p>
         ) : (
           <div className="mt-4 space-y-4">
-            {pending.map((submission) => (
-              <article
-                key={submission.id}
-                className="border-3 border-brutal-black bg-brutal-white p-5 shadow-brutal"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-sm font-bold uppercase tracking-wide">
-                    {submission.productName}
-                  </span>
-                  <span className="border-2 border-brutal-black bg-brutal-yellow px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest">
-                    {submission.offerType}
-                  </span>
-                  {submission.code && (
-                    <code className="border-2 border-dashed border-brutal-black bg-brutal-yellow/40 px-2 py-0.5 font-mono text-xs">
-                      {submission.code}
-                    </code>
-                  )}
-                </div>
-                <h3 className="mt-2 text-base font-bold leading-snug">{submission.headline}</h3>
-                {submission.description && (
-                  <p className="mt-1 text-sm text-brutal-black/75">{submission.description}</p>
-                )}
-                <p className="mt-2 break-all font-mono text-[10px] uppercase tracking-widest text-brutal-black/50">
-                  Claim URL: {submission.website ?? 'not provided'}
-                </p>
+            {pending.map((submission) => {
+              const analysis = analysisBySubmission.get(submission.id);
+              const claims = analysis?.structuredClaims as
+                | { valueSummary?: string | null; eligibility?: string[]; regions?: string[] }
+                | null
+                | undefined;
 
-                <form
-                  action={approve}
-                  className="mt-5 border-t-2 border-dashed border-brutal-black/30 pt-4"
+              return (
+                <article
+                  key={submission.id}
+                  className="border-3 border-brutal-black bg-brutal-white p-5 shadow-brutal"
                 >
-                  <input type="hidden" name="id" value={submission.id} />
-                  <label className="block font-mono text-[10px] font-bold uppercase tracking-widest">
-                    Official proof URL
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-sm font-bold uppercase tracking-wide">
+                      {submission.productName}
+                    </span>
+                    <span className="border-2 border-brutal-black bg-brutal-yellow px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest">
+                      {submission.offerType}
+                    </span>
+                    {submission.code && (
+                      <code className="border-2 border-dashed border-brutal-black bg-brutal-yellow/40 px-2 py-0.5 font-mono text-xs">
+                        {submission.code}
+                      </code>
+                    )}
+                  </div>
+                  <h3 className="mt-2 text-base font-bold leading-snug">{submission.headline}</h3>
+                  {submission.description && (
+                    <p className="mt-1 text-sm text-brutal-black/75">{submission.description}</p>
+                  )}
+                  <p className="mt-2 break-all font-mono text-[10px] uppercase tracking-widest text-brutal-black/50">
+                    Claim URL: {submission.website ?? 'not provided'}
+                  </p>
+
+                  <div className="mt-5 border-t-2 border-dashed border-brutal-black/30 pt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-[10px] font-bold uppercase tracking-widest">
+                          Official-page analysis
+                        </p>
+                        <p className="mt-1 text-xs text-brutal-black/70">
+                          The model reads only the provider page at the official URL; it never
+                          receives Telegram post content.
+                        </p>
+                      </div>
+                      <form action={analyzeOfficialPage}>
+                        <input type="hidden" name="id" value={submission.id} />
+                        <button
+                          type="submit"
+                          className="border-2 border-brutal-black bg-brutal-yellow px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest shadow-brutal"
+                        >
+                          Analyze official page
+                        </button>
+                      </form>
+                    </div>
+                    {analysis && (
+                      <div className="mt-3 border-2 border-dashed border-brutal-black/40 bg-brutal-yellow/20 p-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`border-2 border-brutal-black px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest ${ANALYSIS_COLORS[analysis.status]}`}
+                          >
+                            {analysis.status}
+                          </span>
+                          {analysis.category && (
+                            <span className="font-mono text-[10px] font-bold uppercase tracking-widest">
+                              {analysis.category.replaceAll('_', ' ')}
+                            </span>
+                          )}
+                          {typeof analysis.confidence === 'number' && (
+                            <span className="font-mono text-[10px] uppercase tracking-widest">
+                              {analysis.confidence}% confidence
+                            </span>
+                          )}
+                        </div>
+                        {analysis.evidenceQuote && (
+                          <p className="mt-2 text-xs text-brutal-black/80">
+                            “{analysis.evidenceQuote}”
+                          </p>
+                        )}
+                        {(claims?.valueSummary ||
+                          claims?.eligibility?.length ||
+                          claims?.regions?.length) && (
+                          <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-brutal-black/70">
+                            {[
+                              claims.valueSummary,
+                              ...(claims.eligibility ?? []),
+                              ...(claims.regions ?? []),
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        )}
+                        {analysis.reviewReason && (
+                          <p className="mt-2 text-xs text-brutal-black/70">
+                            Review: {analysis.reviewReason}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <form
+                    action={approve}
+                    className="mt-5 border-t-2 border-dashed border-brutal-black/30 pt-4"
+                  >
+                    <input type="hidden" name="id" value={submission.id} />
+                    <label className="block font-mono text-[10px] font-bold uppercase tracking-widest">
+                      Official proof URL
+                      <input
+                        required
+                        type="url"
+                        name="evidenceUrl"
+                        defaultValue={
+                          analysis?.officialUrl ?? submission.sourceUrl ?? submission.website ?? ''
+                        }
+                        placeholder="https://vendor.example/pricing"
+                        className="mt-1 block w-full border-2 border-brutal-black bg-brutal-white px-3 py-2 font-mono text-xs"
+                      />
+                    </label>
+                    <label className="mt-3 block font-mono text-[10px] font-bold uppercase tracking-widest">
+                      Quoted proof
+                      <textarea
+                        required
+                        name="evidenceQuote"
+                        defaultValue={analysis?.evidenceQuote ?? submission.description ?? ''}
+                        placeholder="Quote the exact text that proves the offer, eligibility or expiry."
+                        rows={3}
+                        className="mt-1 block w-full border-2 border-brutal-black bg-brutal-white px-3 py-2 text-sm"
+                      />
+                    </label>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <button
+                        type="submit"
+                        className="inline-flex items-center justify-center border-3 border-brutal-black bg-brutal-green px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest shadow-brutal transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
+                      >
+                        Publish with proof
+                      </button>
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-brutal-black/60">
+                        Creates source, evidence and version 1
+                      </span>
+                    </div>
+                  </form>
+
+                  <form action={reject} className="mt-3 flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="id" value={submission.id} />
                     <input
-                      required
-                      type="url"
-                      name="evidenceUrl"
-                      defaultValue={submission.sourceUrl ?? submission.website ?? ''}
-                      placeholder="https://vendor.example/pricing"
-                      className="mt-1 block w-full border-2 border-brutal-black bg-brutal-white px-3 py-2 font-mono text-xs"
+                      name="reason"
+                      placeholder="Rejection reason"
+                      className="border-2 border-brutal-black bg-brutal-white px-2 py-1 font-mono text-xs"
                     />
-                  </label>
-                  <label className="mt-3 block font-mono text-[10px] font-bold uppercase tracking-widest">
-                    Quoted proof
-                    <textarea
-                      required
-                      name="evidenceQuote"
-                      defaultValue={submission.description ?? ''}
-                      placeholder="Quote the exact text that proves the offer, eligibility or expiry."
-                      rows={3}
-                      className="mt-1 block w-full border-2 border-brutal-black bg-brutal-white px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
                     <button
                       type="submit"
-                      className="inline-flex items-center justify-center border-3 border-brutal-black bg-brutal-green px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest shadow-brutal transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
+                      className="inline-flex items-center justify-center border-3 border-brutal-black bg-brutal-red px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest text-brutal-white shadow-brutal transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
                     >
-                      Publish with proof
+                      Reject
                     </button>
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-brutal-black/60">
-                      Creates source, evidence and version 1
-                    </span>
-                  </div>
-                </form>
-
-                <form action={reject} className="mt-3 flex flex-wrap items-center gap-2">
-                  <input type="hidden" name="id" value={submission.id} />
-                  <input
-                    name="reason"
-                    placeholder="Rejection reason"
-                    className="border-2 border-brutal-black bg-brutal-white px-2 py-1 font-mono text-xs"
-                  />
-                  <button
-                    type="submit"
-                    className="inline-flex items-center justify-center border-3 border-brutal-black bg-brutal-red px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-widest text-brutal-white shadow-brutal transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
-                  >
-                    Reject
-                  </button>
-                </form>
-              </article>
-            ))}
+                  </form>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
