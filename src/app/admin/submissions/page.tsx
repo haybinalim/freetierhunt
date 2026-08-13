@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { desc, eq } from 'drizzle-orm';
 import slugify from 'slugify';
@@ -194,14 +195,26 @@ export default async function AdminSubmissionsPage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
       <header className="border-3 border-brutal-black bg-brutal-white p-6 shadow-brutal-lg">
-        <p className="font-mono text-xs uppercase tracking-[0.3em] text-brutal-black/60">Admin</p>
-        <h1 className="mt-3 font-mono text-3xl font-bold uppercase tracking-tight md:text-4xl">
-          Evidence review
-        </h1>
-        <p className="mt-2 max-w-3xl font-mono text-xs uppercase tracking-widest text-brutal-black/60">
-          {pending.length} pending · {reviewed.length} reviewed · publication requires a source URL
-          and quoted proof
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-brutal-black/60">
+              Admin
+            </p>
+            <h1 className="mt-3 font-mono text-3xl font-bold uppercase tracking-tight md:text-4xl">
+              Evidence review
+            </h1>
+            <p className="mt-2 max-w-3xl font-mono text-xs uppercase tracking-widest text-brutal-black/60">
+              {pending.length} pending · {reviewed.length} reviewed · publication requires a source
+              URL and quoted proof
+            </p>
+          </div>
+          <Link
+            href="/admin/sources"
+            className="border-2 border-brutal-black bg-brutal-yellow px-3 py-2 font-mono text-xs font-bold uppercase tracking-widest shadow-brutal"
+          >
+            Source health →
+          </Link>
+        </div>
       </header>
 
       <section className="mt-8">

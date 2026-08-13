@@ -44,6 +44,12 @@ export const sourceTypeEnum = pgEnum('source_type', [
 ]);
 
 export const sourceStatusEnum = pgEnum('source_status', ['active', 'paused', 'retired']);
+export const sourceHealthEnum = pgEnum('source_health', [
+  'healthy',
+  'degraded',
+  'paused',
+  'retired',
+]);
 
 export const evidenceTypeEnum = pgEnum('evidence_type', [
   'official_page',
@@ -107,6 +113,11 @@ export const sources = pgTable(
     trustScore: integer('trust_score').default(50).notNull(),
     allowAutomatedSync: boolean('allow_automated_sync').default(false).notNull(),
     syncIntervalMinutes: integer('sync_interval_minutes'),
+    healthStatus: sourceHealthEnum('health_status').default('healthy').notNull(),
+    consecutiveFailures: integer('consecutive_failures').default(0).notNull(),
+    lastFetchAt: timestamp('last_fetch_at', { withTimezone: true }),
+    lastSuccessfulFetchAt: timestamp('last_successful_fetch_at', { withTimezone: true }),
+    lastHealthCheckAt: timestamp('last_health_check_at', { withTimezone: true }),
     notes: text('notes'),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -116,6 +127,7 @@ export const sources = pgTable(
     baseUrlUnique: uniqueIndex('sources_base_url_idx').on(table.baseUrl),
     statusIdx: index('sources_status_idx').on(table.status),
     typeIdx: index('sources_type_idx').on(table.type),
+    healthIdx: index('sources_health_idx').on(table.healthStatus),
   })
 );
 
@@ -145,6 +157,34 @@ export const sourceObservations = pgTable(
       table.sourceId,
       table.observedAt
     ),
+  })
+);
+
+export const sourceFetchRuns = pgTable(
+  'source_fetch_runs',
+  {
+    id: serial('id').primaryKey(),
+    sourceId: integer('source_id')
+      .notNull()
+      .references(() => sources.id, { onDelete: 'cascade' }),
+    method: varchar('method', { length: 20 }).default('GET').notNull(),
+    requestUrl: varchar('request_url', { length: 500 }).notNull(),
+    status: varchar('status', { length: 20 }).notNull(), // succeeded, not_modified, failed, skipped
+    httpStatus: integer('http_status'),
+    durationMs: integer('duration_ms'),
+    responseEtag: varchar('response_etag', { length: 500 }),
+    responseLastModified: varchar('response_last_modified', { length: 500 }),
+    contentHash: varchar('content_hash', { length: 64 }),
+    errorCode: varchar('error_code', { length: 100 }),
+    errorMessage: text('error_message'),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    sourceFetchedIdx: index('source_fetch_runs_source_fetched_idx').on(
+      table.sourceId,
+      table.fetchedAt
+    ),
+    sourceStatusIdx: index('source_fetch_runs_source_status_idx').on(table.sourceId, table.status),
   })
 );
 
