@@ -101,12 +101,20 @@ export default async function AdminSourcesPage() {
               source degraded
             </p>
           </div>
-          <Link
-            href="/admin/submissions"
-            className="border-2 border-brutal-black bg-brutal-yellow px-3 py-2 font-mono text-xs font-bold uppercase tracking-widest shadow-brutal"
-          >
-            Review submissions →
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/telegram"
+              className="border-2 border-brutal-black bg-brutal-white px-3 py-2 font-mono text-xs font-bold uppercase tracking-widest shadow-brutal"
+            >
+              Telegram ingress →
+            </Link>
+            <Link
+              href="/admin/submissions"
+              className="border-2 border-brutal-black bg-brutal-yellow px-3 py-2 font-mono text-xs font-bold uppercase tracking-widest shadow-brutal"
+            >
+              Review submissions →
+            </Link>
+          </div>
         </div>
       </header>
 

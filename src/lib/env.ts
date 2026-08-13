@@ -46,6 +46,14 @@ const serverSchema = z.object({
   PH_API_SECRET: z.string().min(10).optional(),
   FIRECRAWL_API_KEY: z.string().min(10).optional(),
 
+  // Telegram bot — only for explicitly authorized chats and webhook delivery
+  TELEGRAM_BOT_TOKEN: z.string().min(20).optional(),
+  TELEGRAM_WEBHOOK_SECRET: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{1,256}$/)
+    .optional(),
+  TELEGRAM_ALLOWED_CHAT_IDS: z.string().optional(),
+
   // Email (Resend) — Hafta 8
   RESEND_API_KEY: z.string().min(10).optional(),
   RESEND_WEBHOOK_SECRET: z.string().min(10).optional(),

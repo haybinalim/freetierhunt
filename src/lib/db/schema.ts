@@ -73,6 +73,12 @@ export const submissionStatusEnum = pgEnum('submission_status', [
   'approved',
   'rejected',
 ]);
+export const telegramInboundStatusEnum = pgEnum('telegram_inbound_status', [
+  'received',
+  'accepted',
+  'ignored',
+  'rejected',
+]);
 
 // -----------------------------------------------------------------------------
 // Product and source catalog
@@ -437,6 +443,33 @@ export const submissions = pgTable(
     statusIdx: index('submissions_status_idx').on(table.status),
     userIdIdx: index('submissions_user_id_idx').on(table.userId),
     sourceUrlIdx: index('submissions_source_url_idx').on(table.sourceUrl),
+  })
+);
+
+/**
+ * Minimal webhook audit trail for explicitly authorized Telegram chats. Raw message
+ * text is deliberately not persisted; only the official URL and processing result.
+ */
+export const telegramInboundUpdates = pgTable(
+  'telegram_inbound_updates',
+  {
+    id: serial('id').primaryKey(),
+    updateId: integer('update_id').notNull().unique(),
+    chatId: varchar('chat_id', { length: 32 }).notNull(),
+    messageId: integer('message_id').notNull(),
+    chatTitle: varchar('chat_title', { length: 255 }),
+    officialUrl: varchar('official_url', { length: 500 }),
+    submissionId: integer('submission_id').references(() => submissions.id, {
+      onDelete: 'set null',
+    }),
+    status: telegramInboundStatusEnum('status').default('received').notNull(),
+    reason: varchar('reason', { length: 500 }),
+    receivedAt: timestamp('received_at', { withTimezone: true }).defaultNow().notNull(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    chatReceivedIdx: index('telegram_inbound_chat_received_idx').on(table.chatId, table.receivedAt),
+    statusIdx: index('telegram_inbound_status_idx').on(table.status),
   })
 );
 
