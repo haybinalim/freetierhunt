@@ -8,7 +8,7 @@
  */
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, isNotNull, or, sql } from 'drizzle-orm';
 import { db } from './client';
-import { offers, products, offerVotes, featureFlags } from './schema';
+import { offers, products, offerVotes, featureFlags, offerEvidence } from './schema';
 
 // ----------------------------------------------------------------------------
 // Types — derived from schema for full inference
@@ -19,6 +19,7 @@ export type NewProduct = typeof products.$inferInsert;
 export type NewOffer = typeof offers.$inferInsert;
 
 export type OfferWithProduct = Offer & { product: Product };
+export type OfferEvidence = typeof offerEvidence.$inferSelect;
 
 // ----------------------------------------------------------------------------
 // Active offer filter (status + not-expired)
@@ -115,6 +116,32 @@ export async function getVoteCountsBatch(
     map.set(r.offerId, cur);
   }
   return map;
+}
+
+export async function getPrimaryEvidenceBatch(
+  offerIds: number[]
+): Promise<Map<number, OfferEvidence>> {
+  const evidenceByOffer = new Map<number, OfferEvidence>();
+  if (offerIds.length === 0) return evidenceByOffer;
+
+  const rows = await db
+    .select()
+    .from(offerEvidence)
+    .where(and(inArray(offerEvidence.offerId, offerIds), eq(offerEvidence.isPrimary, true)))
+    .orderBy(desc(offerEvidence.observedAt));
+
+  for (const evidence of rows) {
+    if (!evidenceByOffer.has(evidence.offerId)) evidenceByOffer.set(evidence.offerId, evidence);
+  }
+  return evidenceByOffer;
+}
+
+export async function listEvidenceForOffer(offerId: number): Promise<OfferEvidence[]> {
+  return db
+    .select()
+    .from(offerEvidence)
+    .where(eq(offerEvidence.offerId, offerId))
+    .orderBy(desc(offerEvidence.isPrimary), desc(offerEvidence.observedAt));
 }
 
 export async function getVoteCounts(offerId: number): Promise<{ up: number; down: number }> {

@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
       terms: parsed.data.terms ?? null,
       expiresAt: parsed.data.expiresAt ?? null,
       website: parsed.data.website ?? null,
+      sourceUrl: parsed.data.sourceUrl ?? null,
+      submitterRelationship: parsed.data.submitterRelationship ?? null,
     })
     .returning({ id: submissions.id });
 

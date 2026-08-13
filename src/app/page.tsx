@@ -1,13 +1,22 @@
 import Link from 'next/link';
 import { OfferCard } from '@/components/OfferCard';
-import { getStats, getVoteCountsBatch, listActiveOffers } from '@/lib/db/queries';
+import {
+  getPrimaryEvidenceBatch,
+  getStats,
+  getVoteCountsBatch,
+  listActiveOffers,
+} from '@/lib/db/queries';
 
-// ISR: revalidate every 5 minutes (today's deals can change)
-export const revalidate = 300;
+// Offer data is runtime-only so deployments can compile without database credentials.
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   const [stats, offers] = await Promise.all([getStats(), listActiveOffers({ limit: 10 })]);
-  const voteCounts = await getVoteCountsBatch(offers.map((o) => o.id));
+  const offerIds = offers.map((offer) => offer.id);
+  const [voteCounts, evidenceByOffer] = await Promise.all([
+    getVoteCountsBatch(offerIds),
+    getPrimaryEvidenceBatch(offerIds),
+  ]);
   const STATS = [
     { label: 'AI tools tracked', value: `${stats.products}` },
     { label: 'Active offers', value: `${stats.activeOffers}` },
@@ -88,6 +97,7 @@ export default async function HomePage() {
                 offer={offer}
                 rank={i + 1}
                 voteCounts={voteCounts.get(offer.id)}
+                evidence={evidenceByOffer.get(offer.id)}
               />
             ))}
           </div>

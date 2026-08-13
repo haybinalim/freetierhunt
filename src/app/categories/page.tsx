@@ -3,7 +3,7 @@ import slugify from 'slugify';
 import type { Metadata } from 'next';
 import { listCategories } from '@/lib/db/queries';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Categories — Browse AI tools by type',

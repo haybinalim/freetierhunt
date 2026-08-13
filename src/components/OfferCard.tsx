@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import type { OfferWithProduct } from '@/lib/db/queries';
+import type { OfferEvidence, OfferWithProduct } from '@/lib/db/queries';
+import { formatLastVerified, resolveOfferFreshness } from '@/lib/offers/state';
 import { OfferActions } from './OfferActions';
 import { ClaimLink } from './ClaimLink';
 
@@ -21,10 +22,18 @@ interface OfferCardProps {
   offer: OfferWithProduct;
   rank?: number;
   voteCounts?: { up: number; down: number };
+  evidence?: OfferEvidence;
 }
 
-export function OfferCard({ offer, rank, voteCounts }: OfferCardProps) {
+export function OfferCard({ offer, rank, voteCounts, evidence }: OfferCardProps) {
   const { product } = offer;
+  const freshness = resolveOfferFreshness({
+    status: offer.status,
+    verificationState: offer.verificationState,
+    expiresAt: offer.expiresAt,
+    lastVerifiedAt: offer.lastVerifiedAt,
+    reverifyAt: offer.reverifyAt,
+  });
   return (
     <article className="group flex flex-col gap-4 border-3 border-brutal-black bg-brutal-white p-5 shadow-brutal transition-transform hover:-translate-x-1 hover:-translate-y-1 hover:shadow-brutal-lg md:flex-row md:items-center">
       {typeof rank === 'number' && (
@@ -56,6 +65,23 @@ export function OfferCard({ offer, rank, voteCounts }: OfferCardProps) {
         {offer.description && (
           <p className="mt-1 line-clamp-2 text-sm text-brutal-black/75">{offer.description}</p>
         )}
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] font-bold uppercase tracking-widest">
+          {evidence ? (
+            <a
+              href={evidence.url}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="text-brutal-blue underline underline-offset-2"
+            >
+              ✓ Source proof
+            </a>
+          ) : (
+            <span className="text-brutal-orange">Evidence pending</span>
+          )}
+          <span className={freshness.isClaimable ? 'text-brutal-black/60' : 'text-brutal-orange'}>
+            {freshness.isStale ? freshness.label : formatLastVerified(offer.lastVerifiedAt)}
+          </span>
+        </div>
         <div className="mt-3 md:hidden">
           <OfferActions offerId={offer.id} compact initialCounts={voteCounts} />
         </div>
@@ -65,14 +91,20 @@ export function OfferCard({ offer, rank, voteCounts }: OfferCardProps) {
         <OfferActions offerId={offer.id} compact initialCounts={voteCounts} />
       </div>
 
-      <ClaimLink
-        offerId={offer.id}
-        href={product.website ?? `/products/${product.slug}`}
-        external={Boolean(product.website)}
-        className="inline-flex shrink-0 items-center justify-center border-3 border-brutal-black bg-brutal-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest text-brutal-yellow shadow-brutal transition-transform group-hover:-translate-x-0.5 group-hover:-translate-y-0.5"
-      >
-        Claim →
-      </ClaimLink>
+      {freshness.isClaimable ? (
+        <ClaimLink
+          offerId={offer.id}
+          href={offer.canonicalClaimUrl ?? product.website ?? `/products/${product.slug}`}
+          external={Boolean(offer.canonicalClaimUrl ?? product.website)}
+          className="inline-flex shrink-0 items-center justify-center border-3 border-brutal-black bg-brutal-black px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest text-brutal-yellow shadow-brutal transition-transform group-hover:-translate-x-0.5 group-hover:-translate-y-0.5"
+        >
+          Claim →
+        </ClaimLink>
+      ) : (
+        <span className="inline-flex shrink-0 items-center justify-center border-3 border-brutal-black bg-brutal-white px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest text-brutal-black/60">
+          {freshness.label}
+        </span>
+      )}
     </article>
   );
 }

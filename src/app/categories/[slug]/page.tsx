@@ -10,14 +10,8 @@ import {
 } from '@/lib/db/queries';
 import { OfferCard } from '@/components/OfferCard';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
-
-/** Pre-render all known categories at build. */
-export async function generateStaticParams() {
-  const cats = await listCategories();
-  return cats.map((c) => ({ slug: slugify(c.category, { lower: true, strict: true }) }));
-}
 
 /** Resolve slug back to the original category name (case-insensitive). */
 async function resolveCategory(slug: string): Promise<string | null> {

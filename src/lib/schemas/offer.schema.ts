@@ -34,6 +34,8 @@ export const submissionRequestSchema = z.object({
   terms: z.string().max(2000).optional(),
   expiresAt: z.coerce.date().optional(),
   website: z.string().url().max(500).optional(),
+  sourceUrl: z.string().url().max(500).optional(),
+  submitterRelationship: z.enum(['maker', 'user', 'researcher']).optional(),
 });
 export type SubmissionRequest = z.infer<typeof submissionRequestSchema>;
 
