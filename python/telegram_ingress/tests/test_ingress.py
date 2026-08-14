@@ -24,7 +24,7 @@ CHAT_ID = "-1001234567890"
 def grant(chat_id: str = CHAT_ID) -> ChannelAccessGrant:
     return ChannelAccessGrant(
         grant_id="grant_001",
-        source_id="source_partner_001",
+        source_id=1,
         telegram_chat_id=chat_id,
         owner_contact="partner@example.com",
         authorization_reference="partner-agreement://2026-08/001",
@@ -60,7 +60,7 @@ def test_active_grant_accepts_once_and_detects_duplicate() -> None:
     duplicate = policy.evaluate(update_id=1, update_type="channel_post", chat_id=CHAT_ID, now=NOW)
 
     assert accepted.decision is IngressDecision.ACCEPTED
-    assert accepted.source_id == "source_partner_001"
+    assert accepted.source_id == 1
     assert duplicate.decision is IngressDecision.DUPLICATE
 
 

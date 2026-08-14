@@ -29,7 +29,7 @@ class ChannelAccessGrant:
     """
 
     grant_id: str
-    source_id: str
+    source_id: int
     telegram_chat_id: str
     owner_contact: str
     authorization_reference: str
@@ -64,7 +64,7 @@ class MinimalAuditEvent:
     decision: IngressDecision
     reason_code: str
     occurred_at: datetime
-    source_id: str | None = None
+    source_id: int | None = None
     grant_id: str | None = None
     metadata: dict[str, str] = field(default_factory=dict)
 

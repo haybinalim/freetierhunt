@@ -16,9 +16,18 @@ from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 
 from .grants import ChannelGrantRegistry
 from .models import IngressDecision, MinimalAuditEvent
+from .postgres import (
+    PostgresChannelGrantRepository,
+    PostgresDatabase,
+    PostgresIngressAuditRepository,
+    PostgresSettings,
+    PostgresUpdateIdempotencyStore,
+)
 from .webhook_security import (
     TELEGRAM_SECRET_HEADER,
+    ActiveChannelGrantRepository,
     AuthorizedChannelWebhookPolicy,
+    UpdateIdempotencyRepository,
     UpdateIdempotencyStore,
     WebhookAuthenticationError,
     WebhookSecurityConfig,
@@ -43,13 +52,14 @@ class InMemoryAuditSink:
 def create_app(
     *,
     security: WebhookSecurityConfig,
-    grant_registry: ChannelGrantRegistry,
+    grant_registry: ActiveChannelGrantRepository,
     audit_sink: AuditSink,
+    idempotency_store: UpdateIdempotencyRepository | None = None,
 ) -> FastAPI:
     app = FastAPI(title="FreeTierHunt Authorized Telegram Ingress", version="0.1.0")
     policy = AuthorizedChannelWebhookPolicy(
         grant_registry,
-        UpdateIdempotencyStore(security.idempotency_ttl),
+        idempotency_store or UpdateIdempotencyStore(security.idempotency_ttl),
     )
 
     @app.post("/webhooks/telegram", status_code=status.HTTP_202_ACCEPTED)
@@ -86,6 +96,7 @@ def create_app(
             update_id=metadata["update_id"],
             update_type="channel_post",
             chat_id=metadata["chat_id"],
+            message_id=metadata["message_id"],
             now=datetime.now(UTC),
         )
         audit_sink.record(event)
@@ -118,6 +129,9 @@ def _extract_channel_post_metadata(payload: object) -> dict[str, int | str] | No
     post = payload.get("channel_post")
     if isinstance(update_id, bool) or not isinstance(update_id, int) or not isinstance(post, dict):
         return None
+    message_id = post.get("message_id")
+    if isinstance(message_id, bool) or not isinstance(message_id, int) or message_id < 0:
+        return None
     chat = post.get("chat")
     if not isinstance(chat, dict) or chat.get("type") != "channel":
         return None
@@ -127,7 +141,33 @@ def _extract_channel_post_metadata(payload: object) -> dict[str, int | str] | No
     chat_id_str = str(chat_id)
     if not chat_id_str.lstrip("-").isdigit():
         return None
-    return {"update_id": update_id, "chat_id": chat_id_str}
+    return {"update_id": update_id, "chat_id": chat_id_str, "message_id": message_id}
+
+
+def create_postgres_app(
+    *,
+    security: WebhookSecurityConfig,
+    database_settings: PostgresSettings,
+) -> FastAPI:
+    """Create a production-shaped app with durable Postgres repositories.
+
+    The caller owns configuration loading; this factory deliberately does not read
+    or log any secret environment value.
+    """
+    database = PostgresDatabase(database_settings)
+    app = create_app(
+        security=security,
+        grant_registry=PostgresChannelGrantRepository(database),
+        audit_sink=PostgresIngressAuditRepository(database),
+        idempotency_store=PostgresUpdateIdempotencyStore(database),
+    )
+    app.state.webhook_database = database
+
+    @app.on_event("shutdown")
+    def close_postgres_pool() -> None:
+        database.close()
+
+    return app
 
 
 def create_demo_app(secret_token: str, grant_registry: ChannelGrantRegistry) -> FastAPI:

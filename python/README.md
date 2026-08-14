@@ -34,16 +34,36 @@ python3 -m pytest -q
 | `telegram_ingress/api.py` | FastAPI webhook örneği |
 | `telegram_ingress/tests/test_ingress.py` | Secret, allowlist, revoke, idempotency ve data-minimization testleri |
 
-## Üretime geçişte zorunlu değişiklikler
+## Postgres repository katmanı
 
-Bellek içi grant ve update-id depoları üretim için yeterli değildir. Aşağıdaki değişiklikler yapılmalıdır:
+İskelet artık aşağıdaki kalıcı implementasyonları içerir:
 
-1. `ChannelGrantRegistry`, PostgreSQL üzerindeki `source_access_grants` tablosuna bağlanmalıdır. Tabloya `telegram_chat_id` için benzersiz kısıt, geçerlilik penceresi, yetki belgesi referansı, durum ve geri alma alanları eklenmelidir.
-2. `UpdateIdempotencyStore`, işlem atomikliği için `telegram_inbound_updates.update_id` benzersiz kısıtını kullanan bir repository ile değiştirilmelidir. Birden fazla worker veya yeniden başlatma sırasında bellek içi store yeterli değildir.
-3. `InMemoryAuditSink`, ekleme odaklı bir audit tablosuna bağlanmalıdır. Bu tablo yalnızca update kimliği, kanal kimliği, karar, neden kodu, zaman ve grant/source referansı saklamalıdır.
-4. Secret, ortam değişkeni veya secret manager’dan yüklenmeli; düzenli rotasyon, son rotasyon zamanı ve acil webhook kapatma prosedürü işletilmelidir.
-5. HTTP katmanına IP/rate-limit politikası, merkezi log redaksiyonu, `Content-Length` ve gövde sınırı telemetrisi eklenmelidir. Log kaydında `request.body`, `payload`, `text`, kullanıcı adı veya profil nesnesi kullanılmamalıdır.
-6. Telegram webhook’u `allowed_updates=["channel_post"]` ve ayrı bir `secret_token` ile yapılandırılmalıdır. Kanal/bot yetkisi geri alındığında allowlist kaydı ve webhook kabulü aynı anda durdurulmalıdır.
+| Bileşen | PostgreSQL karşılığı | Güvenlik niteliği |
+|---|---|---|
+| `PostgresChannelGrantRepository` | `source_access_grants` | Aktiflik, süre penceresi, yalnız `channel_post`, geri alma |
+| `PostgresUpdateIdempotencyStore` | `telegram_inbound_updates.update_id UNIQUE` | Çoklu worker ve yeniden başlatma üzerinde atomik tekrar teslim engeli |
+| `PostgresIngressAuditRepository` | `telegram_ingress_audit_events` | Ham içerik olmadan append-only karar denetimi |
+| `PostgresDatabase` | `psycopg_pool.ConnectionPool` | Sınırlandırılmış bağlantı havuzu ve transaction kapsamı |
+
+Önce Supabase üzerinde sırasıyla `20260813_0003_telegram_inbound.sql` ve `20260814_0005_source_access_grants.sql` migration’larını uygulayın. İkinci migration, `sources.id` ile bağlı `source_access_grants` ve minimal `telegram_ingress_audit_events` tablolarını ekler.
+
+Uygulamayı yalnızca sunucu tarafı değişkenleriyle başlatın:
+
+```bash
+cd python
+DATABASE_URL='postgresql://…' \
+TELEGRAM_WEBHOOK_SECRET='…' \
+uvicorn telegram_ingress.main:create_app_from_environment --factory --host 0.0.0.0 --port 8080
+```
+
+`DATABASE_URL` uygulama için havuzlu PostgreSQL bağlantısını, `TELEGRAM_WEBHOOK_SECRET` ise Telegram webhook header değerini taşır. Değerleri kaynak koda, test fixture’ına veya günlük kaydına yazmayın.
+
+## Üretime geçişte kalan zorunlu kontroller
+
+1. `source_access_grants` için kanal sahibi yetki belgesi referansı, süreli erişim ve geri alma işlemi yönetim panelinden işletilmelidir.
+2. Secret, ortam değişkeni veya secret manager’dan yüklenmeli; düzenli rotasyon, son rotasyon zamanı ve acil webhook kapatma prosedürü işletilmelidir.
+3. HTTP katmanına IP/rate-limit politikası, merkezi log redaksiyonu, `Content-Length` ve gövde sınırı telemetrisi eklenmelidir. Log kaydında `request.body`, `payload`, `text`, kullanıcı adı veya profil nesnesi kullanılmamalıdır.
+4. Telegram webhook’u `allowed_updates=["channel_post"]` ve ayrı bir `secret_token` ile yapılandırılmalıdır. Kanal/bot yetkisi geri alındığında grant kaydı ve webhook kabulü aynı anda durdurulmalıdır.
 
 ## Telegram webhook yapılandırma örneği
 

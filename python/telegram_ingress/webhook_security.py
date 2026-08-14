@@ -10,9 +10,9 @@ import hmac
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from threading import RLock
+from typing import Protocol
 
-from .grants import ChannelGrantRegistry
-from .models import IngressDecision, MinimalAuditEvent
+from .models import ChannelAccessGrant, IngressDecision, MinimalAuditEvent
 
 TELEGRAM_SECRET_HEADER = "x-telegram-bot-api-secret-token"
 
@@ -42,6 +42,27 @@ def verify_secret_header(received: str | None, expected: str) -> None:
         raise WebhookAuthenticationError("invalid webhook secret")
 
 
+class ActiveChannelGrantRepository(Protocol):
+    def get_active_grant(
+        self,
+        *,
+        chat_id: str,
+        update_type: str,
+        now: datetime | None = None,
+    ) -> ChannelAccessGrant | None: ...
+
+
+class UpdateIdempotencyRepository(Protocol):
+    def mark_if_new(
+        self,
+        update_id: int,
+        now: datetime,
+        *,
+        chat_id: str = "0",
+        message_id: int = 0,
+    ) -> bool: ...
+
+
 class UpdateIdempotencyStore:
     """Small in-memory reference implementation.
 
@@ -54,7 +75,17 @@ class UpdateIdempotencyStore:
         self._seen: dict[int, datetime] = {}
         self._lock = RLock()
 
-    def mark_if_new(self, update_id: int, now: datetime) -> bool:
+    def mark_if_new(
+        self,
+        update_id: int,
+        now: datetime,
+        *,
+        chat_id: str = "0",
+        message_id: int = 0,
+    ) -> bool:
+        # chat_id/message_id are accepted to match the durable repository contract;
+        # this reference store deliberately persists neither.
+        del chat_id, message_id
         if update_id < 0:
             raise ValueError("update_id must be non-negative")
         now = _as_utc(now)
@@ -75,7 +106,11 @@ class UpdateIdempotencyStore:
 class AuthorizedChannelWebhookPolicy:
     """Applies the P0 acceptance policy before any candidate parsing occurs."""
 
-    def __init__(self, grants: ChannelGrantRegistry, idempotency: UpdateIdempotencyStore) -> None:
+    def __init__(
+        self,
+        grants: ActiveChannelGrantRepository,
+        idempotency: UpdateIdempotencyRepository,
+    ) -> None:
         self._grants = grants
         self._idempotency = idempotency
 
@@ -85,6 +120,7 @@ class AuthorizedChannelWebhookPolicy:
         update_id: int,
         update_type: str,
         chat_id: str,
+        message_id: int = 0,
         now: datetime | None = None,
     ) -> MinimalAuditEvent:
         now = now or datetime.now(UTC)
@@ -107,7 +143,12 @@ class AuthorizedChannelWebhookPolicy:
                 occurred_at=now,
             )
 
-        if not self._idempotency.mark_if_new(update_id, now):
+        if not self._idempotency.mark_if_new(
+            update_id,
+            now,
+            chat_id=chat_id,
+            message_id=message_id,
+        ):
             return MinimalAuditEvent(
                 update_id=update_id,
                 chat_id=chat_id,
