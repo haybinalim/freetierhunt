@@ -57,6 +57,7 @@ coverage/
 *.bak
 .cache/
 
-# Python bytecode
+# Python bytecode and local package metadata
 __pycache__/
 *.py[cod]
+*.egg-info/
