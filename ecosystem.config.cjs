@@ -9,6 +9,16 @@
  * Local dev: pnpm run worker:dev (tsx watch mode, no PM2)
  * Production: pnpm run build && pnpm run worker:start
  */
+const path = require('node:path');
+
+// PM2 does not automatically load dotenv files. Production workers read a
+// server-local `.env` file unless WORKER_ENV_FILE supplies another path.
+require('dotenv').config({
+  path: process.env.WORKER_ENV_FILE
+    ? path.resolve(process.env.WORKER_ENV_FILE)
+    : path.join(__dirname, '.env'),
+});
+
 module.exports = {
   apps: [
     {
@@ -23,6 +33,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         TZ: 'UTC',
+        // The worker checks due sources at this cadence; each source still keeps
+        // its own sync_interval_minutes in Postgres.
+        DISCOVERY_WORKER_INTERVAL_MS: process.env.DISCOVERY_WORKER_INTERVAL_MS ?? '300000',
       },
       out_file: './logs/worker-out.log',
       error_file: './logs/worker-error.log',
