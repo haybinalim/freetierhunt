@@ -17,3 +17,9 @@ Bu sayfalar birer **resmî kaynak adapterı** ile periyodik olarak çekilmelidir
 [1] [Google Cloud — Google for Startups Cloud Program](https://cloud.google.com/startup)  
 [2] [AWS — Activate Credits](https://aws.amazon.com/startups/credits/)  
 [3] [Cloudflare — Cloudflare for Startups](https://www.cloudflare.com/startups/)
+
+| GitHub Education | `https://education.github.com/pack` | Öğrenciler için resmî partner teklif kataloğu; çok sayıda ayrı sağlayıcı ve destek/başvuru bağlantısı barındırır. | P1 — katalog adapterı |
+
+GitHub Student Developer Pack sayfası, birden çok partner teklifini tek resmî katalogda sunar. Bu kaynakta adapter, sayfa değişimini algılayıp partner kartlarını aday sinyali olarak çıkarır; her partner için varsa ilk taraf teklif/başvuru URL’si ayrıca doğrulanır. **Erişim:** 17 Ağustos 2026. [4]
+
+[4] [GitHub Education — Student Developer Pack](https://education.github.com/pack)
