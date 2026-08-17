@@ -109,6 +109,12 @@ export default async function AdminSourcesPage() {
               Telegram ingress →
             </Link>
             <Link
+              href="/admin/discovery"
+              className="border-2 border-brutal-black bg-brutal-green px-3 py-2 font-mono text-xs font-bold uppercase tracking-widest shadow-brutal"
+            >
+              Discovery queue →
+            </Link>
+            <Link
               href="/admin/submissions"
               className="border-2 border-brutal-black bg-brutal-yellow px-3 py-2 font-mono text-xs font-bold uppercase tracking-widest shadow-brutal"
             >

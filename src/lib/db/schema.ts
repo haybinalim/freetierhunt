@@ -85,6 +85,12 @@ export const officialAnalysisStatusEnum = pgEnum('official_analysis_status', [
   'needs_review',
   'failed',
 ]);
+export const discoveryCandidateStatusEnum = pgEnum('discovery_candidate_status', [
+  'pending',
+  'accepted',
+  'dismissed',
+  'superseded',
+]);
 
 // -----------------------------------------------------------------------------
 // Product and source catalog
@@ -197,6 +203,44 @@ export const sourceFetchRuns = pgTable(
       table.fetchedAt
     ),
     sourceStatusIdx: index('source_fetch_runs_source_status_idx').on(table.sourceId, table.status),
+  })
+);
+
+/**
+ * A candidate found automatically from a trusted source observation. Candidates
+ * never become public offers without a separate moderation decision.
+ */
+export const discoveryCandidates = pgTable(
+  'discovery_candidates',
+  {
+    id: serial('id').primaryKey(),
+    sourceId: integer('source_id')
+      .notNull()
+      .references(() => sources.id, { onDelete: 'cascade' }),
+    sourceObservationId: integer('source_observation_id').references(() => sourceObservations.id, {
+      onDelete: 'set null',
+    }),
+    fingerprint: varchar('fingerprint', { length: 64 }).notNull().unique(),
+    officialUrl: varchar('official_url', { length: 500 }).notNull(),
+    headline: varchar('headline', { length: 255 }).notNull(),
+    offerType: offerTypeEnum('offer_type'),
+    value: varchar('value', { length: 100 }),
+    evidenceQuote: text('evidence_quote').notNull(),
+    structuredClaims: jsonb('structured_claims').$type<Record<string, unknown>>(),
+    discoveryMethod: varchar('discovery_method', { length: 100 }).notNull(),
+    priority: integer('priority').default(0).notNull(),
+    status: discoveryCandidateStatusEnum('status').default('pending').notNull(),
+    reviewReason: text('review_reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    sourceStatusIdx: index('discovery_candidates_source_status_idx').on(
+      table.sourceId,
+      table.status
+    ),
+    observationIdx: index('discovery_candidates_observation_idx').on(table.sourceObservationId),
+    priorityIdx: index('discovery_candidates_priority_idx').on(table.status, table.priority),
   })
 );
 

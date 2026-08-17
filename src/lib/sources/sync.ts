@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
+import { createCandidatesFromOfficialObservation } from '@/lib/discovery/candidate-service';
 import { sourceFetchRuns, sourceObservations, sources } from '@/lib/db/schema';
 import { OfficialHttpAdapter } from './official-http-adapter';
 import { resolveHealthAfterFetch, type SourceRecord } from './types';
@@ -39,6 +40,8 @@ export type SyncSourceResult = {
   runStatus: 'succeeded' | 'not_modified' | 'failed' | 'skipped';
   healthStatus: 'healthy' | 'degraded' | 'paused' | 'retired';
   observationCreated: boolean;
+  candidatesDiscovered: number;
+  candidatesInserted: number;
 };
 
 /**
@@ -80,6 +83,8 @@ export async function syncOfficialSource(sourceId: number): Promise<SyncSourceRe
       runStatus: 'skipped',
       healthStatus: 'paused',
       observationCreated: false,
+      candidatesDiscovered: 0,
+      candidatesInserted: 0,
     };
   }
 
@@ -144,6 +149,8 @@ export async function syncOfficialSource(sourceId: number): Promise<SyncSourceRe
     .where(eq(sources.id, source.id));
 
   let observationCreated = false;
+  let candidatesDiscovered = 0;
+  let candidatesInserted = 0;
   if (result.status === 'succeeded' && result.body && result.contentHash) {
     const pageText = stripMarkup(result.body);
     const insert = await db
@@ -160,6 +167,16 @@ export async function syncOfficialSource(sourceId: number): Promise<SyncSourceRe
       .onConflictDoNothing()
       .returning({ id: sourceObservations.id });
     observationCreated = insert.length > 0;
+    if (insert[0]) {
+      const discovery = await createCandidatesFromOfficialObservation(sourceRecord, {
+        id: insert[0].id,
+        url: result.requestUrl,
+        title: extractPageTitle(result.body),
+        excerpt: pageText.slice(0, 2_000) || null,
+      });
+      candidatesDiscovered = discovery.discovered;
+      candidatesInserted = discovery.inserted;
+    }
   }
 
   return {
@@ -167,5 +184,7 @@ export async function syncOfficialSource(sourceId: number): Promise<SyncSourceRe
     runStatus: result.status,
     healthStatus: health.status,
     observationCreated,
+    candidatesDiscovered,
+    candidatesInserted,
   };
 }
