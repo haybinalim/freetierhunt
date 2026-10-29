@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Brutal palette (DOSYA 2 — design system)
+        // Brutal palette (docs/plan/v3-part2-execution.md — design system)
         brutal: {
           yellow: '#FFD700',
           black: '#000000',
