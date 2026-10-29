@@ -129,6 +129,6 @@ Husky pre-commit hook runs `lint-staged`. To prevent accidental secret commits:
 
 ## Disaster Recovery
 
-See Ek F in `# 📄 DOSYA 2 ...md` for full DR runbook (database loss, worker crash, build failure scenarios).
+See Ek F in [`docs/plan/v3-part2-execution.md`](plan/v3-part2-execution.md) for full DR runbook (database loss, worker crash, build failure scenarios).
 
 The `env.ts` schema makes recovery deterministic: as long as the vault is intact, a fresh deploy is `cp .env.example .env.local` + paste + boot.

@@ -2,7 +2,7 @@
 
 Aggregator for AI tool free tiers, trials, and verified promo codes.
 
-> **Status:** Bootstrapped — Hafta 1 setup phase. See [`# 📄 DOSYA 2 ...md`](./%23%20%F0%9F%93%84%20DOSYA%202%20%60freetierhunt-v3-part2-execution.md) for the 13-week execution plan.
+> **Status:** Bootstrapped — Hafta 1 setup phase. See [`docs/plan/v3-part2-execution.md`](docs/plan/v3-part2-execution.md) for the 13-week execution plan.
 
 ## Stack
 
@@ -75,8 +75,8 @@ drizzle.config.ts       Migration config (uses DIRECT_URL)
 
 ## Plan References
 
-- **`# 📄 DOSYA 1 ...md`** — Strategy & vision (53 KB)
-- **`# 📄 DOSYA 2 ...md`** — Execution playbook, 13 weeks + appendices (155 KB)
+- **[`docs/plan/v3-part1-strategy.md`](docs/plan/v3-part1-strategy.md)** — Strategy & vision (53 KB)
+- **[`docs/plan/v3-part2-execution.md`](docs/plan/v3-part2-execution.md)** — Execution playbook, 13 weeks + appendices (155 KB)
 - **`docs/free-tier-verification.md`** — Operator note for offer verification
 
 ## Scripts
