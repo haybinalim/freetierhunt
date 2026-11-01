@@ -25,15 +25,15 @@ import { z } from 'zod';
 const serverSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   TZ: z.string().default('UTC'),
-  SITE_URL: z.string().url().default('http://localhost:3000'),
+  SITE_URL: z.url().default('http://localhost:3000'),
 
   // Database (Supabase) — wired Hafta 1 Çarşamba / Hafta 2
-  DATABASE_URL: z.string().url().optional(),
-  DIRECT_URL: z.string().url().optional(),
+  DATABASE_URL: z.url().optional(),
+  DIRECT_URL: z.url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
 
   // Redis / Worker — Hafta 3+
-  REDIS_URL: z.string().url().optional(),
+  REDIS_URL: z.url().optional(),
 
   // LLM Providers — Hafta 1 Cumartesi
   GROQ_API_KEY: z.string().min(20).optional(),
@@ -57,16 +57,16 @@ const serverSchema = z.object({
   // Email (Resend) — Hafta 8
   RESEND_API_KEY: z.string().min(10).optional(),
   RESEND_WEBHOOK_SECRET: z.string().min(10).optional(),
-  RESEND_FROM_EMAIL: z.string().email().optional(),
+  RESEND_FROM_EMAIL: z.email().optional(),
 
   // Monitoring — Hafta 1 Cuma (Sentry wizard)
-  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_DSN: z.url().optional(),
   SENTRY_AUTH_TOKEN: z.string().optional(),
   SENTRY_ORG: z.string().optional(),
   SENTRY_PROJECT: z.string().optional(),
 
   // Webhooks
-  DISCORD_WEBHOOK_URL: z.string().url().optional(),
+  DISCORD_WEBHOOK_URL: z.url().optional(),
   REVALIDATE_SECRET: z.string().min(16).optional(),
 
   // Admin gate (interim, until Supabase Auth role-based access in H9)
@@ -83,11 +83,11 @@ const serverSchema = z.object({
 
 // ---------- Client schema (NEXT_PUBLIC_* — exposed to browser) ----------
 const clientSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SUPABASE_URL: z.url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).optional(),
-  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
+  NEXT_PUBLIC_SENTRY_DSN: z.url().optional(),
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
-  NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
+  NEXT_PUBLIC_POSTHOG_HOST: z.url().optional(),
   NEXT_PUBLIC_TALLY_FORM_ID: z.string().optional(),
 });
 
@@ -123,7 +123,7 @@ function buildEnv() {
   const clientParsed = clientSchema.safeParse(stripEmptyStrings(rawClient));
 
   if (!serverParsed.success) {
-    const errors = serverParsed.error.flatten().fieldErrors;
+    const errors = z.flattenError(serverParsed.error).fieldErrors;
     console.error('❌ Invalid server environment variables:', errors);
     throw new Error(
       `Invalid server env: ${Object.keys(errors).join(', ')}. ` +
@@ -132,7 +132,7 @@ function buildEnv() {
   }
 
   if (!clientParsed.success) {
-    const errors = clientParsed.error.flatten().fieldErrors;
+    const errors = z.flattenError(clientParsed.error).fieldErrors;
     console.error('❌ Invalid client (NEXT_PUBLIC_*) env vars:', errors);
     throw new Error(`Invalid client env: ${Object.keys(errors).join(', ')}`);
   }
