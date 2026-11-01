@@ -123,7 +123,7 @@ function buildEnv() {
   const clientParsed = clientSchema.safeParse(stripEmptyStrings(rawClient));
 
   if (!serverParsed.success) {
-    const errors = serverParsed.error.flatten().fieldErrors;
+    const errors = z.flattenError(serverParsed.error).fieldErrors;
     console.error('❌ Invalid server environment variables:', errors);
     throw new Error(
       `Invalid server env: ${Object.keys(errors).join(', ')}. ` +
@@ -132,7 +132,7 @@ function buildEnv() {
   }
 
   if (!clientParsed.success) {
-    const errors = clientParsed.error.flatten().fieldErrors;
+    const errors = z.flattenError(clientParsed.error).fieldErrors;
     console.error('❌ Invalid client (NEXT_PUBLIC_*) env vars:', errors);
     throw new Error(`Invalid client env: ${Object.keys(errors).join(', ')}`);
   }

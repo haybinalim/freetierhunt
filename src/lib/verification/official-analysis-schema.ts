@@ -14,22 +14,20 @@ export const officialCategorySchema = z.enum([
 export const officialOfferTypeSchema = z.enum(['free_tier', 'trial', 'credit', 'discount']);
 export const verificationVerdictSchema = z.enum(['supported', 'partial', 'unsupported']);
 
-export const officialOfferAnalysisSchema = z
-  .object({
-    category: officialCategorySchema,
-    offerType: officialOfferTypeSchema,
-    verdict: verificationVerdictSchema,
-    confidence: z.number().int().min(0).max(100),
-    evidenceQuote: z.string().min(1).max(1_000),
-    eligibility: z.array(z.string().min(1).max(160)).max(12),
-    regions: z.array(z.string().min(1).max(80)).max(30),
-    requiresCard: z.boolean(),
-    autoRenews: z.boolean(),
-    durationDays: z.number().int().min(0).max(3_650).nullable(),
-    valueSummary: z.string().min(1).max(300).nullable(),
-    reviewReason: z.string().min(1).max(500),
-  })
-  .strict();
+export const officialOfferAnalysisSchema = z.strictObject({
+  category: officialCategorySchema,
+  offerType: officialOfferTypeSchema,
+  verdict: verificationVerdictSchema,
+  confidence: z.number().int().min(0).max(100),
+  evidenceQuote: z.string().min(1).max(1_000),
+  eligibility: z.array(z.string().min(1).max(160)).max(12),
+  regions: z.array(z.string().min(1).max(80)).max(30),
+  requiresCard: z.boolean(),
+  autoRenews: z.boolean(),
+  durationDays: z.number().int().min(0).max(3_650).nullable(),
+  valueSummary: z.string().min(1).max(300).nullable(),
+  reviewReason: z.string().min(1).max(500),
+});
 
 export type OfficialOfferAnalysis = z.infer<typeof officialOfferAnalysisSchema>;
 
