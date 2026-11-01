@@ -25,26 +25,22 @@ type FlatItem =
 
 function flatten(results: SearchResult): FlatItem[] {
   return [
-    ...results.products.map(
-      (p): FlatItem => ({
-        kind: 'product',
-        id: p.id,
-        href: `/products/${p.slug}`,
-        title: p.name,
-        subtitle: p.category ?? p.description,
-      })
-    ),
-    ...results.offers.map(
-      (o): FlatItem => ({
-        kind: 'offer',
-        id: o.id,
-        href: `/products/${o.productSlug}`,
-        title: o.headline,
-        subtitle: o.productName,
-        type: o.type,
-        value: o.value,
-      })
-    ),
+    ...results.products.map((p): FlatItem => ({
+      kind: 'product',
+      id: p.id,
+      href: `/products/${p.slug}`,
+      title: p.name,
+      subtitle: p.category ?? p.description,
+    })),
+    ...results.offers.map((o): FlatItem => ({
+      kind: 'offer',
+      id: o.id,
+      href: `/products/${o.productSlug}`,
+      title: o.headline,
+      subtitle: o.productName,
+      type: o.type,
+      value: o.value,
+    })),
   ];
 }
 
