@@ -4,6 +4,24 @@ Aggregator for AI tool free tiers, trials, and verified promo codes.
 
 > **Status:** Bootstrapped — Hafta 1 setup phase. See [`docs/plan/v3-part2-execution.md`](docs/plan/v3-part2-execution.md) for the 13-week execution plan.
 
+## Screenshots
+
+> Captured locally from `pnpm dev` against a local Postgres loaded with `pnpm db:seed` (sample
+> products and offers). A few offers were marked verified with clearly labelled **demo evidence**
+> to show the source-proof UI — not live production data.
+
+**Home** — hero, live stats and today's top deals ranked by score, with source proof and votes:
+
+![FreeTierHunt home page: "Stop overpaying for AI tools" hero, stats for 20 AI tools and 29 active offers, and the Today's Top Deals list with Cursor, OpenAI and Vercel offers](docs/screenshots/home.png)
+
+**Product page** — every offer for one tool, with promo code copy, source proof and re-check state:
+
+![FreeTierHunt product page for Hugging Face: a verified free-tier offer with source proof and a Get offer button next to a 50% off discount with a copyable code awaiting re-check](docs/screenshots/product-page.png)
+
+**Categories** — browse AI tools by type:
+
+![FreeTierHunt categories page listing AI Coding, AI Search, Backend, Data, Hosting, Inference and LLM categories with product counts](docs/screenshots/categories.png)
+
 ## Stack
 
 - **Framework**: Next.js 15 (App Router) + React 19 + TypeScript (strict)
