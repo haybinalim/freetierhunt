@@ -23,7 +23,7 @@ jobs:
       # Must satisfy the min(20) check in src/lib/env.ts.
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci-build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
 
