@@ -18,6 +18,6 @@ export type UpdatePreferencesRequest = z.infer<typeof updatePreferencesRequestSc
 
 /** POST /api/auth/signup or /api/auth/magic-link */
 export const emailRequestSchema = z.object({
-  email: z.string().email().max(255),
+  email: z.email().max(255),
 });
 export type EmailRequest = z.infer<typeof emailRequestSchema>;
