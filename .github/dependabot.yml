@@ -9,6 +9,10 @@ updates:
       timezone: 'Europe/Istanbul'
     open-pull-requests-limit: 5
     versioning-strategy: increase
+    ignore:
+      # Keep @types/node on the Node major used in CI/runtime (22); bump it by hand.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       dev-deps:
         dependency-type: 'development'
