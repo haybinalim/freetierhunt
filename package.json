@@ -37,7 +37,7 @@
     "bullmq": "^5.79.2",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
-    "ioredis": "^5.11.1",
+    "ioredis": "^6.0.0",
     "lodash-es": "^4.17.21",
     "next": "^15.0.0",
     "openai": "^6.45.0",
